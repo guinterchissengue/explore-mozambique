@@ -2,8 +2,8 @@
 
 REST API for discovering and managing tourist, cultural, historical, natural and recreational places in Mozambique. Built with Node.js, Express and MongoDB (Mongoose), documented with Swagger/OpenAPI and deployed on Render.
 
-- **Swagger UI (deployed):** https://cse341-003-web-services.onrender.com/api-docs
-- **Base URL (deployed):** https://cse341-003-web-services.onrender.com
+Swagger UI: https://explore-mozambique.onrender.com/api-docs
+Base URL: https://explore-mozambique.onrender.com
 - **Swagger file:** [`Swagger.json`](./Swagger.json) (also served at `/Swagger.json`)
 
 > Render's free plan sleeps after inactivity: the first request can take ~30–60 s.
