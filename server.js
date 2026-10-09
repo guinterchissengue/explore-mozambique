@@ -21,13 +21,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rota raiz de teste / status
+// Root: open Swagger UI directly
 app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Welcome to Explore Mozambique API',
-    docs: '/api-docs'
-  });
+  res.redirect('/api-docs');
 });
 
 // Documentação Swagger UI
