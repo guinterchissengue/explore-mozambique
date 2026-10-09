@@ -1,0 +1,32 @@
+{
+  "name": "explore-mozambique-api",
+  "version": "1.0.0",
+  "description": "REST API for discovering and managing places in Mozambique",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "api",
+    "mozambique",
+    "rest",
+    "swagger",
+    "mongodb"
+  ],
+  "author": "Guinter Estudante",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "joi": "^17.13.8",
+    "mongoose": "^8.24.4",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "type": "commonjs",
+  "engines": { "node": ">=18" }
+}
