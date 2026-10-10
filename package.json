@@ -17,16 +17,24 @@
   "author": "Guinter Estudante",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "connect-mongo": "^5.1.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.3",
+    "express-session": "^1.19.0",
     "joi": "^17.13.8",
     "mongoose": "^8.24.4",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12",
+    "passport-local": "^1.0.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
   },
   "type": "commonjs",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

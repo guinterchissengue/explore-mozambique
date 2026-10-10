@@ -10,14 +10,15 @@ const {
 } = require('../controllers/placesController');
 
 const { validatePlace } = require('../middleware/validation');
+const { requireAuth } = require('../middleware/auth');
 
 router.route('/')
   .get(getPlaces)
-  .post(validatePlace, createPlace);
+  .post(requireAuth, validatePlace, createPlace);
 
 router.route('/:id')
   .get(getPlaceById)
-  .put(validatePlace, updatePlace)
-  .delete(deletePlace);
+  .put(requireAuth, validatePlace, updatePlace)
+  .delete(requireAuth, deletePlace);
 
 module.exports = router;

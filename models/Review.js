@@ -28,6 +28,10 @@ const reviewSchema = new mongoose.Schema(
     visitDate: {
       type: Date,
       default: Date.now
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     }
   },
   {

@@ -69,7 +69,7 @@ const createReview = async (req, res) => {
       });
     }
 
-    const review = await Review.create(req.body);
+    const review = await Review.create({ ...req.body, createdBy: req.user && req.user._id });
     res.status(201).json({
       success: true,
       message: "Review created successfully",

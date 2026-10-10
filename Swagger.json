@@ -2,8 +2,8 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Explore Mozambique API",
-    "version": "1.0.0",
-    "description": "REST API to discover and manage tourist, cultural, historical, natural and recreational places in Mozambique. Two collections (places, reviews) with full CRUD, server-side validation and MongoDB persistence."
+    "version": "2.0.0",
+    "description": "REST API to discover and manage tourist, cultural, historical, natural and recreational places in Mozambique. Two collections (places, reviews) with full CRUD, server-side validation, MongoDB persistence and authentication.\n\n**Authentication (OAuth + local accounts).** GET endpoints are public. POST, PUT and DELETE on /places and /reviews, and GET /auth/profile, are **protected**: they return 401 until you log in.\n\n**How to log in:**\n1. GitHub OAuth: open `/auth/github` in the browser address bar (it redirects to GitHub and back to this page), or\n2. Local account: run `POST /auth/register`, then `POST /auth/login` here in Swagger.\n\nA session cookie is stored by the browser and sent automatically on the following requests. Check it with `GET /auth/status`. Log out with `POST /auth/logout`."
   },
   "servers": [
     {
@@ -13,12 +13,16 @@
   ],
   "tags": [
     {
+      "name": "Authentication",
+      "description": "Register, log in (local or GitHub OAuth), log out"
+    },
+    {
       "name": "Places",
-      "description": "CRUD for places"
+      "description": "CRUD for places. GET is public; POST, PUT and DELETE are protected"
     },
     {
       "name": "Reviews",
-      "description": "CRUD for reviews"
+      "description": "CRUD for reviews. GET is public; POST, PUT and DELETE are protected"
     },
     {
       "name": "System",
@@ -26,6 +30,404 @@
     }
   ],
   "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Create a local account",
+        "description": "Creates a user. The password is hashed with bcrypt before it is stored; the plain-text password is never saved.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              },
+              "examples": {
+                "valid": {
+                  "summary": "Valid request",
+                  "value": {
+                    "username": "guinter",
+                    "email": "guinter@example.com",
+                    "password": "MyPassword123"
+                  }
+                },
+                "invalid": {
+                  "summary": "Invalid request (returns 400)",
+                  "value": {
+                    "username": "a",
+                    "email": "not-an-email",
+                    "password": "123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Account created successfully. You can now log in.",
+                  "data": {
+                    "id": "665f1a2b3c4d5e6f7a8b9c0f",
+                    "username": "guinter",
+                    "displayName": "guinter",
+                    "email": "guinter@example.com",
+                    "provider": "local",
+                    "role": "user",
+                    "createdAt": "2026-10-10T12:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Validation failed",
+                  "errors": [
+                    "Username must be at least 3 characters",
+                    "Email must be a valid email address",
+                    "Password must be at least 8 characters"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "An account with this email already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Log in with email and password",
+        "description": "Starts a session. The session cookie is stored by the browser and sent automatically on later requests, which unlocks the protected routes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              },
+              "example": {
+                "email": "guinter@example.com",
+                "password": "MyPassword123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Logged in successfully",
+                  "data": {
+                    "id": "665f1a2b3c4d5e6f7a8b9c0f",
+                    "username": "guinter",
+                    "email": "guinter@example.com",
+                    "provider": "local"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Validation failed",
+                  "errors": [
+                    "Password is required"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong email or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Invalid email or password"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Log out",
+        "description": "Ends the session and clears the cookie. Protected routes return 401 afterwards.",
+        "responses": {
+          "200": {
+            "description": "Logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Logged out successfully"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Check whether you are logged in",
+        "description": "Public. Shows `authenticated: true/false` for the current session.",
+        "responses": {
+          "200": {
+            "description": "Current session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "success": true,
+                  "authenticated": true,
+                  "user": {
+                    "id": "665f1a2b3c4d5e6f7a8b9c0f",
+                    "username": "guinter",
+                    "provider": "github"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get my profile (protected)",
+        "description": "**Protected: requires login.** Returns the logged-in user (never the password hash).",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "id": "665f1a2b3c4d5e6f7a8b9c0f",
+                    "username": "guinter",
+                    "displayName": "guinter",
+                    "email": "guinter@example.com",
+                    "provider": "local",
+                    "role": "user",
+                    "createdAt": "2026-10-10T12:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/github": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Log in with GitHub (OAuth)",
+        "description": "Redirects to GitHub to authorize the app, then back to /auth/github/callback and finally to this documentation page. **Open this URL in the browser address bar** (Swagger's Try it out cannot follow the redirect to GitHub).",
+        "responses": {
+          "302": {
+            "description": "Redirect to GitHub authorization page"
+          },
+          "503": {
+            "description": "GitHub OAuth not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "GitHub OAuth is not configured on this server (missing GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/github/callback": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "GitHub OAuth callback",
+        "description": "Called by GitHub after the user authorizes the app. Creates or finds the user in MongoDB, starts the session and redirects to /api-docs. Not meant to be called manually.",
+        "responses": {
+          "302": {
+            "description": "Redirect to /api-docs after a successful login, or to /auth/failure"
+          }
+        }
+      }
+    },
     "/places": {
       "get": {
         "tags": [
@@ -39,7 +441,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesList"
+                  "$ref": "#/components/schemas/PlaceList"
                 },
                 "example": {
                   "success": true,
@@ -87,27 +489,14 @@
         "tags": [
           "Places"
         ],
-        "summary": "Create a place",
-        "description": "Creates a new place. Server-side validation is applied; invalid data returns 400 and nothing is saved.",
+        "summary": "Create a place (protected)",
+        "description": "Creates a new place. Server-side validation is applied; invalid data returns 400 and nothing is saved. **Protected: requires login (401 if not authenticated).**",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PlaceInput"
-              },
-              "example": {
-                "name": "Ponta do Ouro",
-                "description": "A popular coastal destination in southern Mozambique.",
-                "city": "Ponta do Ouro",
-                "province": "Maputo",
-                "type": "beach",
-                "averageCost": 2000,
-                "rating": 4.6,
-                "latitude": -26.845,
-                "longitude": 32.885,
-                "openingHours": "Open 24 hours",
-                "featured": true
               },
               "examples": {
                 "valid": {
@@ -147,7 +536,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesSingle"
+                  "$ref": "#/components/schemas/PlaceSingle"
                 },
                 "example": {
                   "success": true,
@@ -195,6 +584,20 @@
               }
             }
           },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -209,7 +612,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       }
     },
     "/places/{id}": {
@@ -237,7 +645,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesSingle"
+                  "$ref": "#/components/schemas/PlaceSingle"
                 },
                 "example": {
                   "success": true,
@@ -310,8 +718,8 @@
         "tags": [
           "Places"
         ],
-        "summary": "Update a place",
-        "description": "Replaces the editable fields of an existing place in MongoDB. Validation is applied exactly as in POST.",
+        "summary": "Update a place (protected)",
+        "description": "Replaces the editable fields of an existing place in MongoDB. Validation is applied exactly as in POST. **Protected: requires login (401 if not authenticated).**",
         "parameters": [
           {
             "name": "id",
@@ -330,19 +738,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PlaceInput"
-              },
-              "example": {
-                "name": "Ponta do Ouro",
-                "description": "A popular coastal destination in southern Mozambique.",
-                "city": "Ponta do Ouro",
-                "province": "Maputo",
-                "type": "beach",
-                "averageCost": 2000,
-                "rating": 4.9,
-                "latitude": -26.845,
-                "longitude": 32.885,
-                "openingHours": "Open 24 hours",
-                "featured": true
               },
               "examples": {
                 "valid": {
@@ -382,7 +777,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesSingle"
+                  "$ref": "#/components/schemas/PlaceSingle"
                 },
                 "example": {
                   "success": true,
@@ -430,6 +825,20 @@
               }
             }
           },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
           "404": {
             "description": "Place not found",
             "content": {
@@ -458,14 +867,19 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       },
       "delete": {
         "tags": [
           "Places"
         ],
-        "summary": "Delete a place",
-        "description": "Permanently removes the place from MongoDB.",
+        "summary": "Delete a place (protected)",
+        "description": "Permanently removes the place from MongoDB. **Protected: requires login (401 if not authenticated).**",
         "parameters": [
           {
             "name": "id",
@@ -507,6 +921,20 @@
               }
             }
           },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
           "404": {
             "description": "Place not found",
             "content": {
@@ -535,7 +963,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       }
     },
     "/reviews": {
@@ -551,7 +984,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewsList"
+                  "$ref": "#/components/schemas/ReviewList"
                 },
                 "example": {
                   "success": true,
@@ -593,21 +1026,14 @@
         "tags": [
           "Reviews"
         ],
-        "summary": "Create a review",
-        "description": "Creates a new review. Server-side validation is applied; invalid data returns 400 and nothing is saved.",
+        "summary": "Create a review (protected)",
+        "description": "Creates a new review. Server-side validation is applied; invalid data returns 400 and nothing is saved. **Protected: requires login (401 if not authenticated).**",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ReviewInput"
-              },
-              "example": {
-                "placeId": "665f1a2b3c4d5e6f7a8b9c0d",
-                "visitorName": "Carlos Tembe",
-                "rating": 5,
-                "comment": "Incredible beach and very clean water!",
-                "visitDate": "2026-09-20"
               },
               "examples": {
                 "valid": {
@@ -639,7 +1065,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewsSingle"
+                  "$ref": "#/components/schemas/ReviewSingle"
                 },
                 "example": {
                   "success": true,
@@ -679,6 +1105,20 @@
               }
             }
           },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -693,7 +1133,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       }
     },
     "/reviews/{id}": {
@@ -721,7 +1166,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewsSingle"
+                  "$ref": "#/components/schemas/ReviewSingle"
                 },
                 "example": {
                   "success": true,
@@ -788,8 +1233,8 @@
         "tags": [
           "Reviews"
         ],
-        "summary": "Update a review",
-        "description": "Replaces the editable fields of an existing review in MongoDB. Validation is applied exactly as in POST.",
+        "summary": "Update a review (protected)",
+        "description": "Replaces the editable fields of an existing review in MongoDB. Validation is applied exactly as in POST. **Protected: requires login (401 if not authenticated).**",
         "parameters": [
           {
             "name": "id",
@@ -808,13 +1253,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ReviewInput"
-              },
-              "example": {
-                "placeId": "665f1a2b3c4d5e6f7a8b9c0d",
-                "visitorName": "Carlos Tembe",
-                "rating": 4,
-                "comment": "Incredible beach and very clean water!",
-                "visitDate": "2026-09-20"
               },
               "examples": {
                 "valid": {
@@ -846,7 +1284,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewsSingle"
+                  "$ref": "#/components/schemas/ReviewSingle"
                 },
                 "example": {
                   "success": true,
@@ -886,6 +1324,20 @@
               }
             }
           },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
           "404": {
             "description": "Review not found",
             "content": {
@@ -914,14 +1366,19 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       },
       "delete": {
         "tags": [
           "Reviews"
         ],
-        "summary": "Delete a review",
-        "description": "Permanently removes the review from MongoDB.",
+        "summary": "Delete a review (protected)",
+        "description": "Permanently removes the review from MongoDB. **Protected: requires login (401 if not authenticated).**",
         "parameters": [
           {
             "name": "id",
@@ -963,6 +1420,20 @@
               }
             }
           },
+          "401": {
+            "description": "Not authenticated: log in first (GitHub OAuth at /auth/github or POST /auth/login)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Authentication required. Log in with GitHub (/auth/github) or POST /auth/login first."
+                }
+              }
+            }
+          },
           "404": {
             "description": "Review not found",
             "content": {
@@ -991,7 +1462,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ]
       }
     },
     "/health": {
@@ -1410,6 +1886,101 @@
             }
           }
         }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "example": "guinter"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "guinter@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "maxLength": 72,
+            "example": "MyPassword123"
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "guinter@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "MyPassword123"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1a2b3c4d5e6f7a8b9c0f"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "github"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "example": "user"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastLogin": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "connect.sid",
+        "description": "Session cookie created by logging in (GitHub OAuth at /auth/github, or POST /auth/login). The browser sends it automatically, so you do not need to paste anything here."
       }
     }
   }

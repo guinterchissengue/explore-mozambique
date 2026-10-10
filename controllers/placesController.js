@@ -58,7 +58,7 @@ const getPlaceById = async (req, res) => {
 // @route   POST /places
 const createPlace = async (req, res) => {
   try {
-    const place = await Place.create(req.body);
+    const place = await Place.create({ ...req.body, createdBy: req.user && req.user._id });
     res.status(201).json({
       success: true,
       message: "Place created successfully",

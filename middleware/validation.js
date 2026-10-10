@@ -99,6 +99,43 @@ const reviewSchema = Joi.object({
   })
 });
 
+// ---------- Auth schemas ----------
+const registerSchema = Joi.object({
+  username: Joi.string().trim().min(3).max(30).required().messages({
+    'string.base': 'Username must be a string',
+    'string.empty': 'Username is required',
+    'string.min': 'Username must be at least 3 characters',
+    'string.max': 'Username must be at most 30 characters',
+    'any.required': 'Username is required'
+  }),
+  email: Joi.string().trim().lowercase().email({ tlds: { allow: false } }).required().messages({
+    'string.base': 'Email must be a string',
+    'string.empty': 'Email is required',
+    'string.email': 'Email must be a valid email address',
+    'any.required': 'Email is required'
+  }),
+  password: Joi.string().min(8).max(72).required().messages({
+    'string.base': 'Password must be a string',
+    'string.empty': 'Password is required',
+    'string.min': 'Password must be at least 8 characters',
+    'string.max': 'Password must be at most 72 characters',
+    'any.required': 'Password is required'
+  })
+});
+
+const loginSchema = Joi.object({
+  email: Joi.string().trim().lowercase().required().messages({
+    'string.base': 'Email must be a string',
+    'string.empty': 'Email is required',
+    'any.required': 'Email is required'
+  }),
+  password: Joi.string().required().messages({
+    'string.base': 'Password must be a string',
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required'
+  })
+});
+
 const buildValidator = (schema) => (req, res, next) => {
   try {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
@@ -128,5 +165,7 @@ const buildValidator = (schema) => (req, res, next) => {
 
 module.exports = {
   validatePlace: buildValidator(placeSchema),
-  validateReview: buildValidator(reviewSchema)
+  validateReview: buildValidator(reviewSchema),
+  validateRegister: buildValidator(registerSchema),
+  validateLogin: buildValidator(loginSchema)
 };
